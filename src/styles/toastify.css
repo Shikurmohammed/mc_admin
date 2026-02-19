@@ -1,0 +1,45 @@
+/* src/styles/toastify.css - import this after react-toastify CSS */
+
+/* Match Material-UI theme */
+.Toastify__toast {
+  border-radius: 8px !important;
+  font-family: 'Inter', 'Roboto', sans-serif !important;
+  font-size: 0.875rem !important;
+  padding: 12px 16px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.Toastify__toast--success {
+  background: #10b981 !important; /* success.main */
+}
+
+.Toastify__toast--error {
+  background: #ef4444 !important; /* error.main */
+}
+
+.Toastify__toast--warning {
+  background: #f59e0b !important; /* warning.main */
+}
+
+.Toastify__toast--info {
+  background: #3b82f6 !important; /* info.main */
+}
+
+.Toastify__progress-bar {
+  height: 3px !important;
+}
+
+/* Compact variant */
+.toast-compact {
+  font-size: 0.75rem !important;
+  padding: 6px 12px !important;
+  min-height: 36px !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .Toastify__toast {
+    background: #1e293b !important; /* background.paper */
+    color: #f1f5f9 !important; /* text.primary */
+  }
+}
