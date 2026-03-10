@@ -3,72 +3,53 @@ import { API_BASE_URL } from '../utils/constants';
 
 const apiService = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // Increased to 30s for production analytics/reports
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true, // Keep this for cookies
+  timeout: 30000,
+  withCredentials: true, // Automatically sends/receives HttpOnly cookies
 });
 
-// Request interceptor - ONLY for access token from localStorage
-apiService.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor
 apiService.interceptors.response.use(
   (response) => response.data,
   async (error) => {
     const originalRequest = error.config;
-    const isLoginRequest = originalRequest.url?.includes('/auth/login');
-    
-    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
+
+    // --- ADD THIS SECTION FOR NETWORK ERRORS ---
+    if (!error.response) {
+      // Create a real Error instance instead of a plain object
+      const networkError = new Error("Server is unreachable. Please check if the backend is running.");
+      networkError.isNetworkError = true;
+      return Promise.reject(networkError);
+    }
+
+    // 1. Identify which URL failed
+    const isLogin = originalRequest.url.includes('/auth/login');
+    const isRefresh = originalRequest.url.includes('/auth/refresh');
+
+    // 2. If Login fails with 401, DO NOT RETRY. 
+    // Just throw the error back to the LoginPage so it can show "Invalid Credentials".
+    if (isLogin) {
+      return Promise.reject(error);
+    }
+
+    // 3. If it's a 401 on any OTHER protected route, try to refresh
+    if (error.response?.status === 401 && !originalRequest._retry && !isRefresh) {
       originalRequest._retry = true;
 
       try {
-        // DON'T get refresh token from localStorage - rely on HTTP-only cookie
-        // Just get user ID from localStorage
-        const userStr = localStorage.getItem('user');
-        if (!userStr) throw new Error('No user data');
-        
-        const user = JSON.parse(userStr);
-        
-        // Send only userId - refresh token is in cookie automatically
-        const refreshResponse = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          { userId: user.id }, // Don't send refresh token in body
-          { withCredentials: true }
-        );
-
-        const { access_token, refresh_token } = refreshResponse.data;
-        
-        // Update localStorage with new tokens
-        localStorage.setItem('access_token', access_token);
-        if (refresh_token) {
-          localStorage.setItem('refresh_token', refresh_token);
-        }
-
-        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        await apiService.post('/auth/refresh');
         return apiService(originalRequest);
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        // Clear everything
-        localStorage.clear();
-        window.location.href = '/login';
+        // If refresh fails, clear state and go to login
+        localStorage.removeItem('user');
+        if (window.location.pathname.startsWith('/dashboard')) {
+          window.location.replace('/login');
+        }
         return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );
-
 
 
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Box, CssBaseline, Toolbar, useTheme, useMediaQuery } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import Header from './Header/Header';
@@ -6,6 +7,14 @@ import Sidebar from './Sidebar/Sidebar';
 import { drawerWidth } from '../../utils/constants';
 
 const DashboardLayout = () => {
+  //
+  const location = useLocation();
+
+  // Log all navigation attempts
+  React.useEffect(() => {
+    console.log('📍 Current location:', location.pathname);
+  }, [location]);
+  //
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
@@ -24,17 +33,14 @@ const DashboardLayout = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <CssBaseline />
       <Header onMenuClick={handleSidebarToggle} />
-      <Sidebar open={sidebarOpen} onClose={handleSidebarClose} />
+      <Sidebar open={sidebarOpen} onClose={handleSidebarToggle} />
+
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${sidebarOpen ? drawerWidth : 0}px)` },
-          transition: theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+          minWidth: 0, // 🔥 IMPORTANT FIX
         }}
       >
         <Toolbar />

@@ -81,15 +81,16 @@ import {
 import PageHeader from '../components/common/PageHeader';
 import { useAuth } from '../context/AuthContext';
 import { useThemeMode } from '../context/ThemeContext';
-import { useLanguage, languages } from '../context/LanguageContext'
+import { useLanguage, languages } from '../context/LanguageContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { usersAPI } from '../services/usersService';
 
 const SettingsPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { user, updateProfile, uploadAvatar, logout } = useAuth();
-  const { mode, setThemeMode, toggleTheme } = useThemeMode();
+  const { user, updateProfile, uploadAvatar, logout, loadUserSettings, changePassword, logoutAllDevices, deleteAccount } = useAuth();
+  const { mode, setThemeMode } = useThemeMode();
   const { language, changeLanguage, languages: availableLanguages } = useLanguage();
   const { t, i18n } = useTranslation();
   
@@ -119,71 +120,59 @@ const SettingsPage = () => {
     state: user?.state || '',
     zipCode: user?.zipCode || '',
     country: user?.country || '',
-    socialLinks: {
-      facebook: user?.socialLinks?.facebook || '',
-      twitter: user?.socialLinks?.twitter || '',
-      instagram: user?.socialLinks?.instagram || '',
-      linkedin: user?.socialLinks?.linkedin || '',
+    socialLinks: user?.socialLinks || {
+      facebook: '',
+      twitter: '',
+      instagram: '',
+      linkedin: '',
     },
   });
 
   // Notification settings
-  const [notificationSettings, setNotificationSettings] = useState(() => {
-    const saved = localStorage.getItem('notificationSettings');
-    return saved ? JSON.parse(saved) : {
-      emailNotifications: true,
-      pushNotifications: true,
-      orderUpdates: true,
-      newMessages: true,
-      promotions: false,
-      newsletter: true,
-      reviewResponses: true,
-      priceAlerts: false,
-      weeklyDigest: true,
-      soundEnabled: true,
-      desktopNotifications: false,
-      notificationFrequency: 'instant', // instant, daily, weekly
-    };
+  const [notificationSettings, setNotificationSettings] = useState(user?.notificationSettings || {
+    emailNotifications: true,
+    pushNotifications: true,
+    orderUpdates: true,
+    newMessages: true,
+    promotions: false,
+    newsletter: true,
+    reviewResponses: true,
+    priceAlerts: false,
+    weeklyDigest: true,
+    soundEnabled: true,
+    desktopNotifications: false,
+    notificationFrequency: 'instant',
   });
 
   // Security settings
-  const [securitySettings, setSecuritySettings] = useState(() => {
-    const saved = localStorage.getItem('securitySettings');
-    return saved ? JSON.parse(saved) : {
-      twoFactorAuth: false,
-      loginAlerts: true,
-      saveLoginHistory: true,
-      sessionTimeout: 30, // minutes
-      requirePasswordOnPurchase: true,
-      showOnlineStatus: true,
-      publicProfile: false,
-    };
+  const [securitySettings, setSecuritySettings] = useState(user?.securitySettings || {
+    twoFactorAuth: false,
+    loginAlerts: true,
+    saveLoginHistory: true,
+    sessionTimeout: 30,
+    requirePasswordOnPurchase: true,
+    showOnlineStatus: true,
+    publicProfile: false,
   });
 
   // Appearance settings
-  const [appearanceSettings, setAppearanceSettings] = useState(() => {
-    const saved = localStorage.getItem('appearanceSettings');
-    return saved ? JSON.parse(saved) : {
-      theme: mode,
-      compactMode: false,
-      fontSize: 'medium', // small, medium, large
-      animations: true,
-      reducedMotion: false,
-      highContrast: false,
-      colorScheme: 'default',
-    };
+  const [appearanceSettings, setAppearanceSettings] = useState(user?.appearanceSettings || {
+    theme: mode,
+    compactMode: false,
+    fontSize: 'medium',
+    animations: true,
+    reducedMotion: false,
+    highContrast: false,
+    colorScheme: 'default',
   });
 
   // Preferences
-  const [preferences, setPreferences] = useState(() => {
-    const saved = localStorage.getItem('userPreferences');
-    return saved ? JSON.parse(saved) : {
-      currency: 'ETB',
-      timezone: 'Africa/Addis_Ababa',
-      dateFormat: 'MM/DD/YYYY',
-      measurementSystem: 'metric', // metric or imperial
-      language: language,
-    };
+  const [preferences, setPreferences] = useState(user?.preferences || {
+    currency: 'ETB',
+    timezone: 'Africa/Addis_Ababa',
+    dateFormat: 'MM/DD/YYYY',
+    measurementSystem: 'metric',
+    language: language,
   });
 
   // Password change form
@@ -195,33 +184,8 @@ const SettingsPage = () => {
 
   const [passwordErrors, setPasswordErrors] = useState({});
 
-  // Login history (mock data)
-  const [loginHistory] = useState([
-    {
-      id: 1,
-      device: 'Chrome on Windows',
-      location: 'Addis Ababa, Ethiopia',
-      ip: '196.188.123.45',
-      time: '2024-02-19T10:30:00',
-      successful: true,
-    },
-    {
-      id: 2,
-      device: 'Safari on iPhone',
-      location: 'Addis Ababa, Ethiopia',
-      ip: '196.188.67.89',
-      time: '2024-02-18T22:15:00',
-      successful: true,
-    },
-    {
-      id: 3,
-      device: 'Firefox on Linux',
-      location: 'Unknown location',
-      ip: '45.67.89.123',
-      time: '2024-02-17T14:20:00',
-      successful: false,
-    },
-  ]);
+  // Login history
+  const [loginHistory, setLoginHistory] = useState([]);
 
   const tabs = [
     { label: t('settings.profile'), icon: <Person /> },
@@ -231,13 +195,38 @@ const SettingsPage = () => {
     { label: t('settings.preferences'), icon: <SettingsIcon /> },
   ];
 
+  // Load user settings on mount
   useEffect(() => {
-    // Save settings to localStorage when they change
-    localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
-    localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
-    localStorage.setItem('appearanceSettings', JSON.stringify(appearanceSettings));
-    localStorage.setItem('userPreferences', JSON.stringify(preferences));
-  }, [notificationSettings, securitySettings, appearanceSettings, preferences]);
+    loadSettings();
+    fetchLoginHistory();
+  }, []);
+
+  const loadSettings = async () => {
+    setLoading(true);
+    try {
+      const settings = await loadUserSettings();
+      if (settings) {
+        setProfileForm(settings.profile);
+        setNotificationSettings(settings.notificationSettings);
+        setSecuritySettings(settings.securitySettings);
+        setAppearanceSettings(settings.appearanceSettings);
+        setPreferences(settings.preferences);
+      }
+    } catch (err) {
+      setError('Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLoginHistory = async () => {
+    try {
+      const history = await usersAPI.getLoginHistory();
+      setLoginHistory(history);
+    } catch (err) {
+      console.error('Failed to load login history:', err);
+    }
+  };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -331,9 +320,11 @@ const SettingsPage = () => {
         setSuccess('Avatar updated successfully');
       } else {
         setError(result.error);
+        setAvatarPreview(user?.avatar); // Revert preview on error
       }
     } catch (err) {
       setError('Failed to upload avatar');
+      setAvatarPreview(user?.avatar);
     } finally {
       setLoading(false);
     }
@@ -353,6 +344,66 @@ const SettingsPage = () => {
       }
     } catch (err) {
       setError('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await usersAPI.updateNotificationSettings(notificationSettings);
+      if (result) {
+        setSuccess('Notification settings saved');
+      }
+    } catch (err) {
+      setError('Failed to save notification settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSecurity = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await usersAPI.updateSecuritySettings(securitySettings);
+      if (result) {
+        setSuccess('Security settings saved');
+      }
+    } catch (err) {
+      setError('Failed to save security settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveAppearance = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await usersAPI.updateAppearanceSettings(appearanceSettings);
+      if (result) {
+        setSuccess('Appearance settings saved');
+      }
+    } catch (err) {
+      setError('Failed to save appearance settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await usersAPI.updatePreferences(preferences);
+      if (result) {
+        setSuccess('Preferences saved');
+      }
+    } catch (err) {
+      setError('Failed to save preferences');
     } finally {
       setLoading(false);
     }
@@ -389,15 +440,23 @@ const SettingsPage = () => {
     setError('');
     
     try {
-      // API call to change password
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      setSuccess('Password changed successfully');
-      setPasswordDialog(false);
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
+      const result = await changePassword(
+        passwordForm.currentPassword,
+        passwordForm.newPassword
+      );
+      
+      if (result.success) {
+        setSuccess('Password changed successfully');
+        setPasswordDialog(false);
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+        setPasswordErrors({});
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
       setError('Failed to change password');
     } finally {
@@ -408,12 +467,13 @@ const SettingsPage = () => {
   const handleDeleteAccount = async () => {
     setLoading(true);
     try {
-      // API call to delete account
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      await logout();
-      navigate('/');
+      const result = await deleteAccount();
+      if (result.success) {
+        navigate('/');
+      }
     } catch (err) {
       setError('Failed to delete account');
+    } finally {
       setLoading(false);
     }
   };
@@ -421,9 +481,10 @@ const SettingsPage = () => {
   const handleLogoutAllDevices = async () => {
     setLoading(true);
     try {
-      // API call to logout from all devices
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      setSuccess('Logged out from all other devices');
+      const result = await logoutAllDevices();
+      if (result.success) {
+        setSuccess('Logged out from all other devices');
+      }
     } catch (err) {
       setError('Failed to logout from other devices');
     } finally {
@@ -928,9 +989,10 @@ const SettingsPage = () => {
         <Button
           variant="contained"
           startIcon={<Save />}
-          onClick={() => setSuccess(t('settings.notificationsSaved'))}
+          onClick={handleSaveNotifications}
+          disabled={loading}
         >
-          {t('common.saveSettings')}
+          {loading ? t('common.saving') : t('common.saveSettings')}
         </Button>
       </Box>
     </Paper>
@@ -1123,46 +1185,52 @@ const SettingsPage = () => {
           </Typography>
           
           <Paper variant="outlined">
-            <List>
-              {loginHistory.map((entry, index) => (
-                <React.Fragment key={entry.id}>
-                  {index > 0 && <Divider />}
-                  <ListItem>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {entry.successful ? (
-                            <CheckCircle color="success" fontSize="small" />
-                          ) : (
-                            <Warning color="error" fontSize="small" />
-                          )}
-                          <Typography variant="body2" fontWeight={500}>
-                            {entry.device}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          <Typography variant="caption" display="block">
-                            {entry.location} • IP: {entry.ip}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {new Date(entry.time).toLocaleString()}
-                          </Typography>
-                        </>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      {!entry.successful && (
-                        <Button size="small" color="error">
-                          {t('common.report')}
-                        </Button>
-                      )}
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                </React.Fragment>
-              ))}
-            </List>
+            {loginHistory.length > 0 ? (
+              <List>
+                {loginHistory.map((entry, index) => (
+                  <React.Fragment key={entry.id}>
+                    {index > 0 && <Divider />}
+                    <ListItem>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {entry.successful ? (
+                              <CheckCircle color="success" fontSize="small" />
+                            ) : (
+                              <Warning color="error" fontSize="small" />
+                            )}
+                            <Typography variant="body2" fontWeight={500}>
+                              {entry.device}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            <Typography variant="caption" display="block">
+                              {entry.location} • IP: {entry.ip}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(entry.time).toLocaleString()}
+                            </Typography>
+                          </>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        {!entry.successful && (
+                          <Button size="small" color="error">
+                            {t('common.report')}
+                          </Button>
+                        )}
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Typography color="text.secondary">No login history available</Typography>
+              </Box>
+            )}
           </Paper>
         </Grid>
 
@@ -1194,9 +1262,10 @@ const SettingsPage = () => {
             <Button
               variant="contained"
               startIcon={<Save />}
-              onClick={() => setSuccess(t('settings.securitySaved'))}
+              onClick={handleSaveSecurity}
+              disabled={loading}
             >
-              {t('common.saveSettings')}
+              {loading ? t('common.saving') : t('common.saveSettings')}
             </Button>
           </Box>
         </Grid>
@@ -1435,9 +1504,10 @@ const SettingsPage = () => {
         <Button
           variant="contained"
           startIcon={<Save />}
-          onClick={() => setSuccess(t('settings.appearanceSaved'))}
+          onClick={handleSaveAppearance}
+          disabled={loading}
         >
-          {t('common.saveSettings')}
+          {loading ? t('common.saving') : t('common.saveSettings')}
         </Button>
       </Box>
     </Paper>
@@ -1577,9 +1647,10 @@ const SettingsPage = () => {
         <Button
           variant="contained"
           startIcon={<Save />}
-          onClick={() => setSuccess(t('settings.preferencesSaved'))}
+          onClick={handleSavePreferences}
+          disabled={loading}
         >
-          {t('common.saveSettings')}
+          {loading ? t('common.saving') : t('common.saveSettings')}
         </Button>
       </Box>
     </Paper>
@@ -1597,7 +1668,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ py: 3 }}>
       <PageHeader
         title={t('settings.title')}
         subtitle={t('settings.subtitle')}
@@ -1612,6 +1683,7 @@ const SettingsPage = () => {
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
+          allowScrollButtonsMobile
         >
           {tabs.map((tab, index) => (
             <Tab
@@ -1619,6 +1691,7 @@ const SettingsPage = () => {
               label={tab.label}
               icon={tab.icon}
               iconPosition="start"
+              sx={{ minHeight: 48 }}
             />
           ))}
         </Tabs>
@@ -1784,6 +1857,7 @@ const SettingsPage = () => {
         open={!!success}
         autoHideDuration={3000}
         onClose={() => setSuccess('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert severity="success" onClose={() => setSuccess('')}>
           {success}

@@ -33,7 +33,7 @@ export const menuService = {
         id: 'dashboard',
         title: 'Dashboard',
         icon: DashboardIcon,
-        path: '/dashboard', // ✅ Updated from '/' to '/dashboard'
+        path: '/dashboard', //  from '/' to '/dashboard'
         exact: true,
         keywords: ['home', 'main', 'overview', 'stats'],
         roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
@@ -42,7 +42,7 @@ export const menuService = {
         id: 'crafts',
         title: 'Crafts',
         icon: CraftsIcon,
-        path: '/dashboard/crafts', // ✅ Updated to include /dashboard prefix
+        path: '/dashboard/crafts', //  to include /dashboard prefix
         keywords: ['products', 'items', 'handmade', 'art'],
         roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
       },
@@ -53,7 +53,7 @@ export const menuService = {
         id: 'admin-crafts',
         title: 'All Crafts',
         icon: InventoryIcon,
-        path: '/dashboard/crafts', // ✅ Updated
+        path: '/dashboard/crafts', // 
         keywords: ['manage', 'products', 'inventory'],
         roles: ['ADMIN'],
       },
@@ -61,32 +61,32 @@ export const menuService = {
         id: 'orders',
         title: 'Orders',
         icon: OrdersIcon,
-        path: '/dashboard/orders', // ✅ Updated
+        path: '/dashboard/orders', // 
         keywords: ['purchases', 'transactions'],
         roles: ['ADMIN', 'ARTISAN'],
         children: [
           {
             id: 'all-orders',
             title: 'All Orders',
-            path: '/dashboard/orders/all', // ✅ Updated
+            path: '/dashboard/orders/all', // 
             roles: ['ADMIN'],
           },
           {
             id: 'pending-orders',
             title: 'Pending Orders',
-            path: '/dashboard/orders/pending', // ✅ Updated
+            path: '/dashboard/orders/pending', // 
             roles: ['ADMIN', 'ARTISAN'],
           },
           {
             id: 'completed-orders',
             title: 'Completed Orders',
-            path: '/dashboard/orders/completed', // ✅ Updated
+            path: '/dashboard/orders/completed', // 
             roles: ['ADMIN', 'ARTISAN'],
           },
           {
             id: 'my-orders',
             title: 'My Orders',
-            path: '/dashboard/orders/my-orders', // ✅ Updated
+            path: '/dashboard/orders/my-orders', // 
             roles: ['CUSTOMER'],
           },
         ],
@@ -95,25 +95,25 @@ export const menuService = {
         id: 'users',
         title: 'Users',
         icon: UsersIcon,
-        path: '/dashboard/users', // ✅ Updated
+        path: '/dashboard/users', // 
         roles: ['ADMIN'],
         children: [
           {
             id: 'all-users',
             title: 'All Users',
-            path: '/dashboard/users/all', // ✅ Updated
+            path: '/dashboard/users/all', // 
             roles: ['ADMIN'],
           },
           {
             id: 'artisans',
             title: 'Artisans',
-            path: '/dashboard/users/artisans', // ✅ Updated
+            path: '/dashboard/users/artisans', // 
             roles: ['ADMIN'],
           },
           {
             id: 'customers',
             title: 'Customers',
-            path: '/dashboard/users/customers', // ✅ Updated
+            path: '/dashboard/users/customers', // 
             roles: ['ADMIN'],
           },
         ],
@@ -122,25 +122,25 @@ export const menuService = {
         id: 'analytics',
         title: 'Analytics',
         icon: AnalyticsIcon,
-        path: '/dashboard/analytics', // ✅ Updated
+        path: '/dashboard/analytics', // 
         roles: ['ADMIN', 'ARTISAN'],
         children: [
           {
             id: 'sales-analytics',
             title: 'Sales Analytics',
-            path: '/dashboard/analytics/sales', // ✅ Updated
+            path: '/dashboard/analytics/sales', // 
             roles: ['ADMIN', 'ARTISAN'],
           },
           {
             id: 'craft-analytics',
             title: 'Craft Analytics',
-            path: '/dashboard/analytics/crafts', // ✅ Updated
+            path: '/dashboard/analytics/crafts', // 
             roles: ['ADMIN', 'ARTISAN'],
           },
           {
             id: 'user-analytics',
             title: 'User Analytics',
-            path: '/dashboard/analytics/users', // ✅ Updated
+            path: '/dashboard/analytics/users', // 
             roles: ['ADMIN'],
           },
         ],
@@ -149,32 +149,32 @@ export const menuService = {
         id: 'reviews',
         title: 'Reviews',
         icon: ReviewsIcon,
-        path: '/dashboard/reviews', // ✅ Updated
+        path: '/dashboard/reviews', // 
         roles: ['ADMIN', 'ARTISAN'],
       },
       {
         id: 'my-crafts',
         title: 'My Crafts',
         icon: MyCraftsIcon,
-        path: '/dashboard/my-crafts', // ✅ Updated
+        path: '/dashboard/my-crafts', // 
         roles: ['ARTISAN'],
         children: [
           {
             id: 'all-my-crafts',
             title: 'All My Crafts',
-            path: '/dashboard/my-crafts/all', // ✅ Updated
+            path: '/dashboard/my-crafts/all', // 
             roles: ['ARTISAN'],
           },
           {
             id: 'add-craft',
             title: 'Add New Craft',
-            path: '/dashboard/my-crafts/add', // ✅ Updated
+            path: '/dashboard/my-crafts/add', // 
             roles: ['ARTISAN'],
           },
           {
             id: 'drafts',
             title: 'Drafts',
-            path: '/dashboard/my-crafts/drafts', // ✅ Updated
+            path: '/dashboard/my-crafts/drafts', // 
             roles: ['ARTISAN'],
           },
         ],
@@ -183,51 +183,51 @@ export const menuService = {
         id: 'categories',
         title: 'Categories',
         icon: CategoryIcon,
-        path: '/dashboard/categories', // ✅ Updated
+        path: '/dashboard/categories', // 
         roles: ['ADMIN'],
       },
       {
         id: 'messages',
         title: 'Messages',
         icon: MessageIcon,
-        path: '/dashboard/messages', // ✅ Updated
+        path: '/dashboard/messages', // 
         roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
       },
       {
         id: 'settings',
         title: 'Settings',
         icon: SettingsIcon,
-        path: '/dashboard/settings', // ✅ Updated
+        path: '/dashboard/settings', // 
         roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
         children: [
           {
             id: 'profile',
             title: 'Profile Settings',
-            path: '/dashboard/settings/profile', // ✅ Updated
+            path: '/dashboard/settings/profile', // 
             roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
           },
           {
             id: 'security',
             title: 'Security',
-            path: '/dashboard/settings/security', // ✅ Updated
+            path: '/dashboard/settings/security', // 
             roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
           },
           {
             id: 'notifications',
             title: 'Notifications',
-            path: '/dashboard/settings/notifications', // ✅ Updated
+            path: '/dashboard/settings/notifications', // 
             roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
           },
           {
             id: 'appearance',
             title: 'Appearance',
-            path: '/dashboard/settings/appearance', // ✅ Updated
+            path: '/dashboard/settings/appearance', // 
             roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
           },
           {
             id: 'admin-settings',
             title: 'Admin Settings',
-            path: '/dashboard/settings/admin', // ✅ Updated
+            path: '/dashboard/settings/admin', // 
             roles: ['ADMIN'],
           },
         ],
@@ -236,7 +236,7 @@ export const menuService = {
         id: 'help',
         title: 'Help & Support',
         icon: HelpIcon,
-        path: '/dashboard/help', // ✅ Updated
+        path: '/dashboard/help', // 
         roles: ['ADMIN', 'ARTISAN', 'CUSTOMER'],
       },
     ];

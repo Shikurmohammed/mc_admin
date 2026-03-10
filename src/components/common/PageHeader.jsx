@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
 import {
   Box,
   Typography,
@@ -19,7 +20,7 @@ import {
   FilterList,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
-
+import {authAPI} from '../../services/authService';
 
 const PageHeader = ({
   title,
@@ -31,12 +32,37 @@ const PageHeader = ({
   onDownload,
   onFilter,
   tags = [],
-  collaborators = [],
+  collaborators: initialCollaborators = [],
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [collaborators, setCollaborators] = useState(initialCollaborators);
 
-  // Generate breadcrumbs from URL
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      if (initialCollaborators.length === 0) {
+        try {
+          const data = await authAPI.getProfile();
+          
+          // FIX: Normalize the data structure so it ALWAYS has a 'name' property
+          const normalizedUser = {
+            ...data,
+            name: data?.name || 
+                  (data?.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : null) || 
+                  data?.email || 
+                  'User'
+          };
+          
+          setCollaborators([normalizedUser]);
+        } catch (error) {
+          console.error("Failed to fetch collaborators:", error);
+        }
+      }
+    };
+    fetchCollaborators();
+  }, []);
+
+
   const pathnames = location.pathname.split('/').filter((x) => x);
 
   const formatName = (string) => {
@@ -45,7 +71,6 @@ const PageHeader = ({
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
-
   return (
     <Box sx={{ mb: 4 }}>
       {/* Breadcrumbs Section */}

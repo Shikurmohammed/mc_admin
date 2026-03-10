@@ -22,6 +22,7 @@ import {
   FormControl,
   FormLabel,
   Checkbox,
+  Tooltip,
 } from '@mui/material';
 import {
   Visibility,
@@ -157,10 +158,10 @@ const RegisterPage = () => {
         return (
           <Box sx={{ mt: 2 }}>
             <FormControl component="fieldset" fullWidth>
-              <FormLabel 
-                component="legend" 
-                sx={{ 
-                  mb: 2, 
+              <FormLabel
+                component="legend"
+                sx={{
+                  mb: 2,
                   fontWeight: 600,
                   color: 'text.primary',
                   fontSize: '0.875rem'
@@ -175,15 +176,15 @@ const RegisterPage = () => {
               >
                 <Grid container spacing={2}>
                   {[
-                    { 
-                      value: 'customer', 
-                      label: 'Customer', 
+                    {
+                      value: 'customer',
+                      label: 'Customer',
                       icon: <ShoppingBag />,
                       desc: 'Browse and purchase handmade crafts'
                     },
-                    { 
-                      value: 'artisan', 
-                      label: 'Artisan', 
+                    {
+                      value: 'artisan',
+                      label: 'Artisan',
                       icon: <Storefront />,
                       desc: 'Sell your crafts and manage your shop'
                     }
@@ -193,13 +194,13 @@ const RegisterPage = () => {
                         sx={{
                           p: 2,
                           border: '2px solid',
-                          borderColor: formData.accountType === type.value 
-                            ? 'primary.main' 
+                          borderColor: formData.accountType === type.value
+                            ? 'primary.main'
                             : 'divider',
                           borderRadius: 2,
                           cursor: 'pointer',
                           transition: 'all 0.2s',
-                          bgcolor: formData.accountType === type.value 
+                          bgcolor: formData.accountType === type.value
                             ? alpha('#4f46e5', 0.04)
                             : 'transparent',
                           '&:hover': {
@@ -207,9 +208,9 @@ const RegisterPage = () => {
                             bgcolor: alpha('#4f46e5', 0.02),
                           },
                         }}
-                        onClick={() => setFormData(prev => ({ 
-                          ...prev, 
-                          accountType: type.value 
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          accountType: type.value
                         }))}
                       >
                         <FormControlLabel
@@ -228,7 +229,7 @@ const RegisterPage = () => {
                               </Typography>
                             </Box>
                           }
-                          sx={{ 
+                          sx={{
                             alignItems: 'flex-start',
                             m: 0,
                             '& .MuiFormControlLabel-label': { width: '100%' }
@@ -434,9 +435,9 @@ const RegisterPage = () => {
               </Box>
             ) : (
               <Box>
-                <Typography 
-                  variant="subtitle2" 
-                  fontWeight={600} 
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={600}
                   gutterBottom
                   sx={{ fontSize: '0.875rem' }}
                 >
@@ -454,7 +455,7 @@ const RegisterPage = () => {
                   }}
                 >
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    By creating an account, you agree to our Terms of Service and Privacy Policy. 
+                    By creating an account, you agree to our Terms of Service and Privacy Policy.
                     You will receive account-related emails. You can unsubscribe at any time.
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -463,7 +464,7 @@ const RegisterPage = () => {
                     our quality guidelines and authenticity standards.
                   </Typography>
                 </Paper>
-                
+
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -500,6 +501,9 @@ const RegisterPage = () => {
         return null;
     }
   };
+  const handleNavigate = async (path) => {
+    navigate(path);
+  };
 
   return (
     <Box
@@ -507,7 +511,7 @@ const RegisterPage = () => {
         display: 'flex',
         alignItems: 'center',
         minHeight: '100vh',
-        background: (theme) => 
+        background: (theme) =>
           `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, 
           ${alpha(theme.palette.background.default, 1)} 100%)`,
         py: { xs: 4, md: 0 }
@@ -515,12 +519,18 @@ const RegisterPage = () => {
     >
       <Container maxWidth="lg">
         <Grid container spacing={{ xs: 4, md: 8 }} alignItems="center" justifyContent="center">
-          
+
           {/* Left Side: Branding */}
           <Grid item xs={12} md={6} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
             <Box sx={{ display: 'inline-flex', p: 1.5, borderRadius: 3, bgcolor: 'primary.main', mb: 3 }}>
-              <ShoppingBag sx={{ color: 'white', fontSize: 32 }} />
+              <Tooltip title="Go to Home" placement="top">
+                <ShoppingBag sx={{ color: 'white', fontSize: 32 }} onClick={() => handleNavigate('/')} />
+              </Tooltip>
             </Box>
+            <Typography variant="h6" fontWeight={700} color="white" sx={{ ml: 1, cursor: 'pointer' }} onClick={() => handleNavigate('/')}>
+              Go to Home
+            </Typography>
+            <Divider sx={{ my: 2 }}></Divider>
             <Typography
               variant="h2"
               fontWeight={800}
@@ -532,20 +542,22 @@ const RegisterPage = () => {
                 Artisans' Community
               </Typography>
             </Typography>
-            <Typography 
-              variant="h6" 
-              color="text.secondary" 
-              sx={{ 
-                fontWeight: 400, 
-                maxWidth: 450, 
-                mx: { xs: 'auto', md: 0 } 
+            <Typography
+              variant="h6"
+              color="text.secondary"
+              sx={{
+                fontWeight: 400,
+                maxWidth: 450,
+                mx: { xs: 'auto', md: 0 }
               }}
             >
-              {formData.accountType === 'artisan' 
+              {formData.accountType === 'artisan'
                 ? 'Showcase your crafts and connect with buyers worldwide.'
                 : 'Discover unique handmade creations from talented artisans.'}
             </Typography>
+
           </Grid>
+
 
           {/* Right Side: Registration Card */}
           <Grid item xs={12} md={5} lg={4}>
@@ -580,17 +592,17 @@ const RegisterPage = () => {
                 </Box>
 
                 {/* Stepper */}
-                <Stepper 
-                  activeStep={activeStep} 
-                  sx={{ 
+                <Stepper
+                  activeStep={activeStep}
+                  sx={{
                     mb: 3,
-                    '& .MuiStepLabel-label': { 
+                    '& .MuiStepLabel-label': {
                       fontSize: '0.75rem',
                       mt: 0.5
                     },
-                    '& .MuiStepIcon-root': { 
-                      width: 20, 
-                      height: 20 
+                    '& .MuiStepIcon-root': {
+                      width: 20,
+                      height: 20
                     }
                   }}
                 >
@@ -626,8 +638,8 @@ const RegisterPage = () => {
                       onClick={handleNext}
                       disabled={loading}
                       endIcon={
-                        activeStep === steps.length - 1 
-                          ? <CheckCircle fontSize="small" /> 
+                        activeStep === steps.length - 1
+                          ? <CheckCircle fontSize="small" />
                           : <ArrowForward fontSize="small" />
                       }
                       sx={{ textTransform: 'none' }}

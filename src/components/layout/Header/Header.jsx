@@ -42,11 +42,14 @@ import { useAuth } from '../../../context/AuthContext';
 import { useThemeMode } from '../../../context/ThemeContext';
 import NotificationBell from './NotificationBell';
 import { menuService } from '../../../services/menuService';
+import MessagesDropdown from './MessagesDropdown';
+import { Chat as ChatIcon } from '@mui/icons-material';
 
 const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const { mode, toggleTheme } = useThemeMode();
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(10);
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchValue, setSearchValue] = useState('');
@@ -61,6 +64,17 @@ const Header = ({ onMenuClick }) => {
 
   const handleProfileMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleProfileMenuClose = () => setAnchorEl(null);
+
+  const [messagesAnchorEl, setMessagesAnchorEl] = useState(null);
+
+  // Add handlers:
+  const handleMessagesClick = (event) => {
+    setMessagesAnchorEl(event.currentTarget);
+  };
+
+  const handleMessagesClose = () => {
+    setMessagesAnchorEl(null);
+  };
 
   // Debounce search to prevent race conditions and improve performance
   useEffect(() => {
@@ -105,6 +119,8 @@ const Header = ({ onMenuClick }) => {
     handleProfileMenuClose();
     navigate(path);
   };
+
+
 
   return (
     <AppBar
@@ -176,6 +192,27 @@ const Header = ({ onMenuClick }) => {
             {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
           </IconButton>
 
+
+
+          {/* Messages Icon */}
+          <Tooltip title="Messages">
+            <IconButton onClick={handleMessagesClick} color="inherit">
+              <Badge badgeContent={unreadCount} color="error">
+
+                <ChatIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
+          <MessagesDropdown
+            anchorEl={messagesAnchorEl}
+            open={Boolean(messagesAnchorEl)}
+            onClose={handleMessagesClose}
+          />
+
+
+          {/* Notification Bell */}
+
           <NotificationBell />
 
           <Tooltip title="Account settings">
@@ -207,7 +244,7 @@ const Header = ({ onMenuClick }) => {
             <Typography color="error">Logout</Typography>
           </MenuItem>
         </Menu>
-         <LanguageSwitcher variant="icon" size="small" />
+        <LanguageSwitcher variant="icon" size="small" />
       </Toolbar>
     </AppBar>
   );

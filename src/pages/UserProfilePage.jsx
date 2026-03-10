@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/common/PageHeader';
-import { userAPI } from '../services/usersService';
+import { usersAPI } from '../services/usersService';
 import {craftsAPI} from '../services/craftsService';
 import {reviewsAPI} from '../services/reviewsService';
 
@@ -47,7 +47,7 @@ const UserProfilePage = () => {
         setLoading(true);
         
         // Fetch user data
-        const userData = await userAPI.getUser(id);
+        const userData = await usersAPI.getUser(id);
         setUser(userData);
         
         // Fetch user's crafts if they are an artisan
@@ -79,7 +79,7 @@ const UserProfilePage = () => {
   const handleToggleStatus = async () => {
     try {
       const newStatus = !user.isActive;
-      await userAPI.updateUser(id, { isActive: newStatus });
+      await usersAPI.updateUser(id, { isActive: newStatus });
       setUser(prev => ({ ...prev, isActive: newStatus }));
     } catch (err) {
       setError(err.message || 'Failed to update user status');

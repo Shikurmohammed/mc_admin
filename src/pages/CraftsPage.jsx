@@ -118,18 +118,26 @@ const CraftsPage = () => {
     setDialogOpen(false);
   };
 
-  const fetchFeaturedCrafts = async () => {
-    setLoading(true);
-    try {
-      // This would be an API call to get Ethiopian crafts
-      const response = await craftsAPI.getFeaturedCrafts();
-      setFeaturedCrafts(response.data || []);
-    } catch (err) {
-      console.error('Failed to fetch featured crafts:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchFeaturedCrafts = async () => {
+  setLoading(true);
+  try {
+    const response = await craftsAPI.getFeaturedCrafts();
+    
+    // LOGIC: If your interceptor returns response.data, 
+    // 'response' here is already the array.
+    const craftsData = Array.isArray(response) ? response : (response?.data || []);
+    
+    setFeaturedCrafts(craftsData);
+  } catch (err) {
+    console.error('Failed to fetch featured crafts:', err);
+    // Check Network Tab: If the server says "400", it usually 
+    // means it expected a UUID but got the string "featured" 
+    // because of route ordering in NestJS.
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchFeaturedCrafts();
@@ -510,92 +518,3 @@ const CraftsPage = () => {
 export default CraftsPage;
 
 
-
-
-
-
-
-
-// import React, { useState } from 'react';
-// import { Container, Box, Button } from '@mui/material';
-// import { useNavigate } from 'react-router-dom';
-// import { useAuth } from '../context/AuthContext'; 
-// import PageHeader from '../components/common/PageHeader';
-// import CraftGrid from '../components/crafts/CraftGrid';
-// import AddCraftDialog from '../components/crafts/AddCraftDialog'; 
-// import React, { useState, useEffect } from 'react';
-// import {
-//   Container,
-//   Box,
-//   Typography,
-//   Button,
-//   Chip,
-//   IconButton,
-//   Menu,
-//   MenuItem,
-//   Alert,
-//   CircularProgress,
-//   Dialog,
-//   DialogTitle,
-//   DialogContent,
-//   DialogActions,
-//   TextField,
-//   Grid,
-//   Paper,
-//   Badge,
-//   Avatar,
-//   Tooltip,
-//   Zoom,
-//   Fab,
-//   Drawer,
-//   useTheme,
-//   alpha,
-//   Tabs,
-//   Tab,
-//   Rating,
-// } from '@mui/material';
-// const CraftsPage = () => {
-//   const { isAuthenticated, user } = useAuth(); 
-//   const navigate = useNavigate(); 
-//   const [dialogOpen, setDialogOpen] = useState(false);
-//   const [refreshKey, setRefreshKey] = useState(0);
-
-//   const handleAddSuccess = () => {
-//     // Refresh the crafts grid
-//     setRefreshKey(prev => prev + 1);
-//     setDialogOpen(false);
-//   };
-
-//   const actions = isAuthenticated ? [
-//     {
-//       label: 'Add New Craft',
-//       onClick: () => setDialogOpen(true),
-//       variant: 'contained',
-//     },
-//   ] : [];
-
-//   return (
-//     <Container maxWidth="xl">
-//       <PageHeader
-//         title="Handmade Crafts"
-//         subtitle="Discover unique handmade creations"
-//         breadcrumbs={true}
-//         actions={actions}
-//       />
-      
-//       {/* Use AddCraftDialog, */}
-//       <AddCraftDialog
-//         open={dialogOpen}
-//         onClose={() => setDialogOpen(false)}
-//         onSuccess={handleAddSuccess}
-//       />
-      
-//       <Box sx={{ mt: 3 }}>
-//         {/*  Pass refreshKey to force re-render when craft is added */}
-//         <CraftGrid key={refreshKey} />
-//       </Box>
-//     </Container>
-//   );
-// };
-
-// export default CraftsPage;

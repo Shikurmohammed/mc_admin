@@ -1,6 +1,7 @@
 // src/locales/i18n.js
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import LandingPage from '../pages/LandingPage';
 
 // English translations
 const enTranslations = {
@@ -218,6 +219,9 @@ const enTranslations = {
     unauthorized: 'You are not authorized to perform this action',
     notFound: 'Resource not found',
   },
+  homePage: {
+    
+  }
 };
 
 // Amharic translations

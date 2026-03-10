@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, isValidElement } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   TextField,
   List,
@@ -14,10 +14,8 @@ import {
   Paper,
   Chip,
   CircularProgress,
-  Collapse,
   Fade,
-  Badge,
-  Icon,
+  ListItemButton,
 } from '@mui/material';
 import {
   Search,
@@ -26,148 +24,172 @@ import {
   TrendingUp,
   ArrowRight,
   OpenInNew,
-  Star,
-  Schedule,
-  Launch,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { menuService } from '../../../services/menuService';
 
 const SidebarSearch = ({ onSearchSelect }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [recentSearches, setRecentSearches] = useState([]);
-  const [popularSearches, setPopularSearches] = useState([]);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showRecent, setShowRecent] = useState(true);
-  const searchRef = useRef(null);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [recent, setRecent] = useState([]);
+  const [popular, setPopular] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  // Load recent and popular searches
+  const navigate = useNavigate();
+  const containerRef = useRef(null);
+
+  /* ---------------- Load initial data ---------------- */
+
   useEffect(() => {
-    setRecentSearches(menuService.getRecentSearches());
-    setPopularSearches(menuService.getPopularSearches());
+    setRecent(menuService.getRecentSearches());
+    setPopular(menuService.getPopularSearches());
   }, []);
 
-  // Handle click outside to close search
+  /* ---------------- Click outside ---------------- */
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setIsSearchOpen(false);
-        setSearchQuery('');
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+        setQuery('');
+        setResults([]);
+        setActiveIndex(-1);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Perform search with debounce
+  /* ---------------- Debounced Search ---------------- */
+
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery.trim()) {
-        performSearch(searchQuery);
-      } else {
-        setSearchResults([]);
-        setShowRecent(true);
+    const delay = setTimeout(() => {
+      if (!query.trim()) {
+        setResults([]);
+        setActiveIndex(-1);
+        return;
       }
+
+      performSearch(query);
     }, 300);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+    return () => clearTimeout(delay);
+  }, [query]);
 
-  const performSearch = (query) => {
-    setIsLoading(true);
-    setShowRecent(false);
-    
-    // Simulate API delay
-    setTimeout(() => {
-      const results = menuService.search(query);
-      setSearchResults(results.menuItems.slice(0, 10)); // Limit to 10 results
-      setIsLoading(false);
-    }, 200);
+  const performSearch = async (text) => {
+    setLoading(true);
+    setActiveIndex(-1);
+
+    // simulate async (replace with API if needed)
+    const data = menuService.search(text);
+    setResults(data.menuItems.slice(0, 10));
+    setLoading(false);
   };
 
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      menuService.addRecentSearch(query);
-      setRecentSearches(menuService.getRecentSearches());
-    }
-  };
+  /* ---------------- Handlers ---------------- */
 
-  const handleResultClick = (item) => {
+  const handleSelect = (item) => {
     navigate(item.path);
-    setSearchQuery('');
-    setSearchResults([]);
-    setIsSearchOpen(false);
-    onSearchSelect?.();
-    
-    // Add to recent searches
     menuService.addRecentSearch(item.title);
-    setRecentSearches(menuService.getRecentSearches());
+    setRecent(menuService.getRecentSearches());
+
+    setQuery('');
+    setResults([]);
+    setOpen(false);
+    setActiveIndex(-1);
+
+    onSearchSelect?.();
   };
 
-  const handleRecentSearchClick = (query) => {
-    setSearchQuery(query);
-    performSearch(query);
+  const handleRecentClick = (text) => {
+    setQuery(text);
   };
 
-  const clearRecentSearches = () => {
+  const clearRecent = () => {
     menuService.clearRecentSearches();
-    setRecentSearches([]);
+    setRecent([]);
   };
 
-  const getIcon = (icon) => {
-    if (!icon) return <ArrowRight fontSize="small" />;
-    if (isValidElement(icon)) return icon;
-    if (typeof icon === 'string') {
-      return <Icon fontSize="small">{icon}</Icon>;
+  /* ---------------- Keyboard Navigation ---------------- */
+
+  const handleKeyDown = (e) => {
+    if (!open) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) =>
+        prev < results.length - 1 ? prev + 1 : prev
+      );
     }
-    const IconComponent = icon;
-    return <IconComponent fontSize="small" />;
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : 0));
+    }
+
+    if (e.key === 'Enter') {
+      if (results[activeIndex]) {
+        handleSelect(results[activeIndex]);
+      }
+    }
+
+    if (e.key === 'Escape') {
+      setOpen(false);
+      setQuery('');
+      setResults([]);
+    }
   };
 
-  const highlightText = (text, highlight) => {
-    if (!highlight || !text) return text;
-    
-    // Escape special regex characters to prevent crashes
-    const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const parts = text.split(new RegExp(`(${escapedHighlight})`, 'gi'));
-    return parts.map((part, i) => 
-      part.toLowerCase() === highlight.toLowerCase() ? 
-      <span key={i} style={{ backgroundColor: 'yellow', fontWeight: 'bold' }}>{part}</span> : 
-      part
+  /* ---------------- Highlight ---------------- */
+
+  const highlight = (text, value) => {
+    if (!value) return text;
+
+    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+
+    return parts.map((part, i) =>
+      part.toLowerCase() === value.toLowerCase() ? (
+        <span key={i} style={{ fontWeight: 600, background: '#ffe58f' }}>
+          {part}
+        </span>
+      ) : (
+        part
+      )
     );
   };
 
+  /* ===================== UI ===================== */
+
   return (
-    <Box ref={searchRef} sx={{ position: 'relative', mb: 2, zIndex: 1300 }}>
+    <Box ref={containerRef} sx={{ position: 'relative', mb: 2 }}>
       <TextField
         fullWidth
-        placeholder="Search menu, pages, features..."
-        value={searchQuery}
-        onChange={(e) => handleSearch(e.target.value)}
-        onFocus={() => setIsSearchOpen(true)}
+        size="small"
+        placeholder="Search..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
               <Search fontSize="small" />
             </InputAdornment>
           ),
-          endAdornment: searchQuery && (
+          endAdornment: query && (
             <InputAdornment position="end">
-              {isLoading ? (
+              {loading ? (
                 <CircularProgress size={16} />
               ) : (
                 <IconButton
                   size="small"
                   onClick={() => {
-                    setSearchQuery('');
-                    setSearchResults([]);
-                    setShowRecent(true);
+                    setQuery('');
+                    setResults([]);
                   }}
                 >
                   <Close fontSize="small" />
@@ -177,17 +199,13 @@ const SidebarSearch = ({ onSearchSelect }) => {
           ),
           sx: {
             borderRadius: 2,
-            backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.1),
-            '&:hover': {
-              backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.2),
-            },
+            backgroundColor: (theme) =>
+              alpha(theme.palette.action.hover, 0.1),
           },
         }}
-        size="small"
       />
 
-      {/* Search Results Dropdown */}
-      <Fade in={isSearchOpen}>
+      <Fade in={open}>
         <Paper
           elevation={8}
           sx={{
@@ -196,189 +214,117 @@ const SidebarSearch = ({ onSearchSelect }) => {
             left: 0,
             right: 0,
             mt: 1,
-            maxHeight: 500,
-            overflow: 'auto',
+            maxHeight: 450,
+            overflowY: 'auto',
             borderRadius: 2,
             zIndex: 1300,
-            display: isSearchOpen ? 'block' : 'none',
-            boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
           }}
         >
-          {searchQuery ? (
-            <>
-              {/* Search Results Header */}
-              <Box sx={{ p: 2, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle2" fontWeight={600}>
-                    Search Results
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  Searching for "{searchQuery}"
-                </Typography>
+          {/* ========== SEARCH RESULTS ========== */}
+          {query ? (
+            loading ? (
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <CircularProgress size={24} />
               </Box>
-
-              {/* Search Results */}
-              {isLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                  <CircularProgress size={24} />
-                </Box>
-              ) : searchResults.length > 0 ? (
-                <List dense sx={{ py: 0 }}>
-                  {searchResults.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <ListItem
-                        button
-                        onClick={() => handleResultClick(item)}
+            ) : results.length > 0 ? (
+              <List dense disablePadding>
+                {results.map((item, index) => (
+                  <React.Fragment key={item.id}>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        selected={index === activeIndex}
+                        onClick={() => handleSelect(item)}
                         sx={{
-                          py: 1.5,
-                          '&:hover': {
-                            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                          py: 1,
+                          '&.Mui-selected': {
+                            backgroundColor: (theme) =>
+                              alpha(theme.palette.primary.main, 0.15),
                           },
                         }}
                       >
                         <ListItemIcon sx={{ minWidth: 36 }}>
-                          {getIcon(item.icon)}
+                          <ArrowRight fontSize="small" />
                         </ListItemIcon>
+
                         <ListItemText
-                          primary={
-                            <Box>
-                              <Typography variant="body2" fontWeight={600}>
-                                {highlightText(item.title, searchQuery)}
-                              </Typography>
-                              {item.parentTitle && (
-                                <Typography variant="caption" color="text.secondary">
-                                  {item.parentTitle} › {item.title}
-                                </Typography>
-                              )}
-                            </Box>
-                          }
-                          secondary={
-                            <Typography variant="caption" color="text.secondary" noWrap>
-                              {item.path}
-                            </Typography>
-                          }
-                        />
-                        <OpenInNew fontSize="small" sx={{ color: 'text.secondary' }} />
-                      </ListItem>
-                      {index < searchResults.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              ) : (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    No results found for "{searchQuery}"
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Try different keywords or check for typos
-                  </Typography>
-                </Box>
-              )}
-            </>
-          ) : showRecent && (
-            <>
-              {/* Recent Searches */}
-              {recentSearches.length > 0 && (
-                <>
-                  <Box sx={{ p: 2, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        Recent Searches
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={clearRecentSearches}
-                        sx={{ fontSize: '0.75rem' }}
-                      >
-                        Clear all
-                      </IconButton>
-                    </Box>
-                  </Box>
-                  <List dense sx={{ py: 0 }}>
-                    {recentSearches.map((search, index) => (
-                      <React.Fragment key={index}>
-                        <ListItem
-                          button
-                          onClick={() => handleRecentSearchClick(search)}
-                          sx={{
-                            py: 1.5,
-                            '&:hover': {
-                              backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.1),
-                            },
+                          primary={highlight(item.title, query)}
+                          secondary={item.path}
+                          primaryTypographyProps={{
+                            variant: 'body2',
+                            component: 'div', // 🔥 prevents nested <p>
                           }}
+                          secondaryTypographyProps={{
+                            variant: 'caption',
+                            component: 'div', // 🔥 prevents nested <p>
+                          }}
+                        />
+                        <OpenInNew fontSize="small" />
+                      </ListItemButton>
+                    </ListItem>
+                    {index < results.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  No results found
+                </Typography>
+              </Box>
+            )
+          ) : (
+            <>
+              {/* ========== RECENT ========== */}
+              {recent.length > 0 && (
+                <>
+                  <Box sx={{ p: 2, pb: 1 }}>
+                    <Typography variant="subtitle2">
+                      Recent Searches
+                    </Typography>
+                  </Box>
+                  <List dense disablePadding>
+                    {recent.map((item, i) => (
+                      <ListItem key={i} disablePadding>
+                        <ListItemButton
+                          onClick={() => handleRecentClick(item)}
                         >
                           <ListItemIcon sx={{ minWidth: 36 }}>
                             <History fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Typography variant="body2">
-                                {search}
-                              </Typography>
-                            }
-                          />
-                          <ArrowRight fontSize="small" sx={{ color: 'text.secondary' }} />
-                        </ListItem>
-                        {index < recentSearches.length - 1 && <Divider />}
-                      </React.Fragment>
+                          <ListItemText primary={item} />
+                        </ListItemButton>
+                      </ListItem>
                     ))}
                   </List>
+
+                  <Box sx={{ px: 2, pb: 2 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ cursor: 'pointer' }}
+                      onClick={clearRecent}
+                    >
+                      Clear all
+                    </Typography>
+                  </Box>
                 </>
               )}
 
-              {/* Popular Searches */}
-              <Box sx={{ p: 2, borderTop: recentSearches.length > 0 ? '1px solid' : 'none', borderColor: 'divider' }}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  Popular Searches
+              {/* ========== POPULAR ========== */}
+              <Box sx={{ p: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Popular
                 </Typography>
+
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {popularSearches.map((search, index) => (
+                  {popular.map((item, i) => (
                     <Chip
-                      key={index}
-                      label={search}
+                      key={i}
                       size="small"
                       icon={<TrendingUp fontSize="small" />}
-                      onClick={() => handleRecentSearchClick(search)}
-                      sx={{
-                        borderRadius: 1,
-                        '&:hover': {
-                          backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                        },
-                      }}
+                      label={item}
+                      onClick={() => handleRecentClick(item)}
                     />
                   ))}
-                </Box>
-              </Box>
-
-              {/* Quick Actions */}
-              <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  Quick Actions
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Chip
-                    label="Go to Dashboard"
-                    size="small"
-                    onClick={() => navigate('/')}
-                    sx={{ borderRadius: 1 }}
-                  />
-                  <Chip
-                    label="Create Event"
-                    size="small"
-                    onClick={() => navigate('/calendar')}
-                    sx={{ borderRadius: 1 }}
-                  />
-                  <Chip
-                    label="View Reports"
-                    size="small"
-                    onClick={() => navigate('/analytics/reports')}
-                    sx={{ borderRadius: 1 }}
-                  />
                 </Box>
               </Box>
             </>

@@ -3,59 +3,49 @@ import { authAPI } from '../services/authService';
 import decodeToken from '../utils/decodeJwt';
 import apiService from '../services/apiService';
 import { getErrorMessage } from '../utils/errorHelper';
+import { usersAPI } from '../services/usersService';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(!!user);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const login = async (credentials) => {
     setLoading(true);
     try {
       const data = await authAPI.login(credentials);
-      const { access_token, refresh_token, user: userData } = data;
 
-      if (!access_token) throw new Error("No token received");
+      // Only user data is returned - tokens are in HTTP-only cookies
+      const { user: userData } = data;
 
-      const decoded = decodeToken(access_token);
+      if (!userData) throw new Error("No user data received");
+
       const loggedUser = {
         id: userData.id,
         email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
         role: userData.role,
-        exp: decoded?.exp,
+        avatar: userData.avatar,
       };
 
       setUser(loggedUser);
       setIsAuthenticated(true);
+
+      // NO localStorage for tokens - they're in HTTP-only cookies
+      // Only store non-sensitive user data
       localStorage.setItem('user', JSON.stringify(loggedUser));
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
 
       return { success: true, user: loggedUser };
     } catch (err) {
-
       console.error("Login Error:", err);
-
-      // Use the helper to get a clean message
       const friendlyMessage = getErrorMessage(err);
-
       return {
         success: false,
         error: friendlyMessage
       };
-      // console.log(err)
-      // const backendMessage = err.response?.data?.message;
-      // return { 
-      //   success: false, 
-      //   error: Array.isArray(backendMessage) 
-      //     ? backendMessage.join(', ') 
-      //     : backendMessage || "Invalid email or password" 
-      // };
     } finally {
       setLoading(false);
     }
@@ -63,149 +53,303 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      const userId = user?.id || JSON.parse(localStorage.getItem('user'))?.id;
-      if (userId) {
-        console.log("Good Bye to user with ID...", userId)
-        await authAPI.logout(userId);
-      }
+      await authAPI.logout();
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
       setUser(null);
       setIsAuthenticated(false);
-      localStorage.clear();
+      localStorage.removeItem('user');
+      // No token cleanup needed - cookies are cleared by backend
     }
-  }, [user?.id]);
+  }, []);
 
   const refreshToken = useCallback(async () => {
-    const currentUserId = user?.id || JSON.parse(localStorage.getItem('user') || '{}')?.id;
-
-    if (!currentUserId) {
-      throw new Error('No user ID');
-    }
-
     try {
-      // Don't send refresh token in body - it's in HTTP-only cookie
-      const data = await authAPI.refreshTokens({ userId: Number(currentUserId) });
+      // No need to send userId - backend gets refresh token from cookie
+      const data = await authAPI.refreshTokens();
 
-      if (data && data.access_token) {
-        localStorage.setItem('access_token', data.access_token);
-        if (data.refresh_token) {
-          localStorage.setItem('refresh_token', data.refresh_token);
-        }
-
-        const decoded = decodeToken(data.access_token);
-        setUser(prev => ({
-          ...prev,
-          ...decoded,
-          exp: decoded?.exp
-        }));
+      if (data) {
+        // Optionally, you might get updated user data
+        // No need to store new tokens - they're in cookies
 
         return { success: true };
       } else {
-        throw new Error("Invalid response format from refresh");
+        throw new Error("Invalid response from refresh");
       }
     } catch (err) {
       console.error('Token refresh failed:', err);
       await logout();
       return { success: false, error: err.message };
     }
-  }, [user?.id, logout]);
+  }, [logout]);
 
-  const checkTokenExpiration = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) return false;
-
+  const checkAuthStatus = useCallback(async () => {
     try {
-      const decoded = decodeToken(token);
-      if (!decoded || !decoded.exp) return false;
-
-      const now = Date.now() / 1000;
-      const timeUntilExpiry = decoded.exp - now;
-
-      if (timeUntilExpiry < 300) { // Less than 5 minutes
-        console.log('Token expiring soon, refreshing...');
-        const result = await refreshToken();
-        return result.success;
+      const data = await authAPI.checkAuth();
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        return true;
       }
-      return true;
+      return false;
     } catch (err) {
-      console.error('Token validation failed:', err);
+      console.error('Auth check failed:', err);
       return false;
     }
-  }, [refreshToken]);
+  }, []);
 
-  // Initialize auth state - check with a protected endpoint
+  // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('access_token');
+      setLoading(true);
       const savedUser = localStorage.getItem('user');
+      const isDashboard = window.location.pathname.startsWith('/dashboard');
 
-      if (token && savedUser) {
-        try {
-          // Verify token is still valid by making a lightweight request
-          // Use a protected endpoint that just checks auth status
-          await authAPI.getProfile();
-
-          setUser(JSON.parse(savedUser));
-          setIsAuthenticated(true);
-        } catch (err) {
-          // Token is invalid or expired, try to refresh
-          if (err.response?.status === 401) {
-            const refreshResult = await refreshToken();
-            if (refreshResult.success) {
-              setIsAuthenticated(true);
-            } else {
-              // Refresh failed, clear everything
-              localStorage.clear();
-            }
-          } else {
-            // Other error, clear everything
-            localStorage.clear();
-          }
-        }
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+        setIsAuthenticated(true);
+      } else if (!isDashboard) {
+        // No user, not dashboard? Just stop loading.
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        const isValid = await checkAuthStatus();
+        if (!isValid && isDashboard) {
+          throw new Error("Session invalid");
+        }
+      } catch (err) {
+        setUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem('user');
+
+        if (isDashboard && window.location.pathname !== '/login') {
+          window.location.replace('/login'); // Use replace to clear history
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
     initAuth();
-  }, [refreshToken]);
+  }, [checkAuthStatus]);
+
+  // useEffect(() => {
+  //   const initAuth = async () => {
+  //     const savedUser = localStorage.getItem('user');
+
+  //     if (savedUser) {
+  //       // Optimistically set user from localStorage
+  //       setUser(JSON.parse(savedUser));
+  //       setIsAuthenticated(true);
+  //     }
+
+  //     // Verify with backend
+  //     const isValid = await checkAuthStatus();
+
+  //     if (!isValid) {
+  //       // Backend says we're not authenticated, clear local state
+  //       setUser(null);
+  //       setIsAuthenticated(false);
+  //       localStorage.removeItem('user');
+  //     }
+
+  //     setLoading(false);
+  //   };
+
+  //   initAuth();
+  // }, [checkAuthStatus]);
 
   // Auto refresh token periodically
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const interval = setInterval(() => {
-      checkTokenExpiration();
-    }, 4 * 60 * 1000); // Check every 4 minutes
+    const interval = setInterval(async () => {
+      await refreshToken();
+    }, 10 * 60 * 1000); // Refresh every 10 minutes (before 15min expiry)
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, checkTokenExpiration]);
+  }, [isAuthenticated, refreshToken]);
 
-  const updateProfile = async (userData) => {
+  // const updateProfile = async (userData) => {
+  //   try {
+  //     const updatedUser = { ...user, ...userData };
+  //     setUser(updatedUser);
+  //     localStorage.setItem('user', JSON.stringify(updatedUser));
+  //     return { success: true, user: updatedUser };
+  //   } catch (err) {
+  //     return { success: false, error: err.message };
+  //   }
+  // };
+  //Reg
+  const register = async (userData) => {
+    setLoading(true);
     try {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      return { success: true, user: updatedUser };
+      // 1. Call the API (Make sure authAPI.register is defined in your services)
+      const data = await authAPI.register(userData);
+
+      const { user: registeredUser } = data;
+
+      if (!registeredUser) throw new Error("Registration succeeded but no user data returned");
+
+      // 2. Update State
+      setUser(registeredUser);
+      setIsAuthenticated(true);
+
+      // 3. Sync localStorage (Non-sensitive info only)
+      localStorage.setItem('user', JSON.stringify(registeredUser));
+
+      return { success: true, user: registeredUser };
     } catch (err) {
-      return { success: false, error: err.message };
+      console.error("Registration Error:", err);
+      return {
+        success: false,
+        error: err.response?.data?.message || err.message || "Registration failed"
+      };
+    } finally {
+      setLoading(false);
     }
   };
 
-  const value = {
-    user,
-    role: user?.role || 'CUSTOMER',
-    isAuthenticated,
-    loading,
-    login,
-    logout,
-    refreshToken,
-    updateProfile,
-    isAdmin: user?.role === 'ADMIN',
-    isArtisan: user?.role === 'ARTISAN',
-    isCustomer: user?.role === 'CUSTOMER',
+
+  const updateProfile = async (profileData) => {
+    try {
+      const updatedUser = await usersAPI.updateProfile(profileData);
+      setUser(prev => ({ ...prev, ...updatedUser }));
+      localStorage.setItem('user', JSON.stringify({ ...user, ...updatedUser }));
+      return { success: true, user: updatedUser };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   };
+
+  const uploadAvatar = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const result = await usersAPI.uploadAvatar(formData);
+
+      // Update user with new avatar URL
+      setUser(prev => ({ ...prev, avatar: result.url }));
+      localStorage.setItem('user', JSON.stringify({ ...user, avatar: result.url }));
+
+      return { success: true, url: result.url };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const updateNotificationSettings = async (settings) => {
+    try {
+      const result = await usersAPI.updateNotificationSettings(settings);
+      return { success: true, settings: result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const updateSecuritySettings = async (settings) => {
+    try {
+      const result = await usersAPI.updateSecuritySettings(settings);
+      return { success: true, settings: result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+ const updateAppearanceSettings = async (settings) => {
+    try {
+      const result = await usersAPI.updateAppearanceSettings(settings);
+      return { success: true, settings: result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const updatePreferences = async (preferences) => {
+    try {
+      const result = await usersAPI.updatePreferences(preferences);
+      return { success: true, preferences: result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      await usersAPI.changePassword({ currentPassword, newPassword });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const getLoginHistory = async () => {
+    try {
+      return await usersAPI.getLoginHistory();
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const logoutAllDevices = async () => {
+    try {
+      await authAPI.logoutAllDevices(); // Usually an auth service method
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const deleteAccount = async () => {
+    try {
+      await usersAPI.deleteAccount();
+      localStorage.clear();
+      setUser(null);
+      setIsAuthenticated(false);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const loadUserSettings = async () => {
+    try {
+      return await usersAPI.getUserSettings();
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      return null;
+    }
+  };
+const value = {
+  user,
+  role: user?.role || 'CUSTOMER',
+  isAuthenticated,
+  loading,
+  login,
+  logout,
+  register,
+  refreshToken,
+  checkAuthStatus,
+  updateProfile,
+  uploadAvatar,
+  updateNotificationSettings,
+  updateSecuritySettings,
+  updateAppearanceSettings,
+  updatePreferences,
+  changePassword,
+  getLoginHistory,
+  logoutAllDevices,
+  deleteAccount,
+  loadUserSettings,
+  isAdmin: user?.role === 'ADMIN',
+  isArtisan: user?.role === 'ARTISAN',
+  isCustomer: user?.role === 'CUSTOMER',
+};
 
   return (
     <AuthContext.Provider value={value}>

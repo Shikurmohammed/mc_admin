@@ -63,23 +63,26 @@ const OrdersPage = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const params = {
+      const rawParams = {
         page: pagination.page + 1,
         limit: pagination.rowsPerPage,
-        status: activeTab === 0 ? '' : tabs[activeTab].value,
-        ...(filters.search && { search: filters.search }),
-        ...(filters.dateRange.start && { startDate: filters.dateRange.start }),
-        ...(filters.dateRange.end && { endDate: filters.dateRange.end }),
-        ...(filters.paymentMethod && { paymentMethod: filters.paymentMethod }),
+        // Only set status if it's not the "All" tab (index 0)
+        status: activeTab === 0 ? undefined : tabs[activeTab].value,
+        search: filters.search || undefined,
       };
+
+      // Filter out undefined/empty keys so they aren't sent in the URL
+      const cleanParams = Object.fromEntries(
+        Object.entries(rawParams).filter(([_, v]) => v != null && v !== '')
+      );
 
       let response;
       if (user?.role === 'ADMIN') {
-        response = await ordersAPI.getOrders(params);
+        response = await ordersAPI.getOrders(cleanParams);
       } else if (user?.role === 'ARTISAN') {
-        response = await ordersAPI.getArtisanOrders(params);
+        response = await ordersAPI.getArtisanOrders(cleanParams);
       } else {
-        response = await ordersAPI.getUserOrders(params);
+        response = await ordersAPI.getUserOrders(cleanParams);
       }
 
       // Handle response structure
@@ -89,7 +92,8 @@ const OrdersPage = () => {
       setOrders(Array.isArray(ordersData) ? ordersData : []);
       setPagination(prev => ({ ...prev, total }));
     } catch (err) {
-      notificationService.error(err.response?.data?.message || 'Failed to load orders');
+      notificationService.error(err.response?.data?.message || err.message || err || 'Failed to load orders');
+      console.error('Error fetching orders:', err);
     } finally {
       setLoading(false);
     }

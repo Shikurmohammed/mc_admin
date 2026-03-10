@@ -4,7 +4,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ImportExport from '@mui/icons-material/ImportExport';
 import Print from '@mui/icons-material/Print';
 import PageHeader from '../components/common/PageHeader';
-import { userAPI } from '../services/usersService';
+import { usersAPI } from '../services/usersService';
 import { useAuth } from '../context/AuthContext';
 import notificationService from '../services/notificationService';
 // Import components
@@ -91,7 +91,7 @@ const UsersPage = () => {
       };
 
     
-      const response = await userAPI.getUsers(params);
+      const response = await usersAPI.getUsers(params);
 
       // If response is array, use it directly
       if (Array.isArray(response)) {
@@ -266,11 +266,11 @@ const UsersPage = () => {
         delete payload.confirmPassword;
       }
       if (formMode === 'add') {
-        await userAPI.createUser(userData);
+        await usersAPI.createUser(userData);
         //setSuccess('User created successfully');
         notificationService.success('User created successfully');
       } else {
-        await userAPI.updateUser(selectedUser.id, userData);
+        await usersAPI.updateUser(selectedUser.id, userData);
         //setSuccess('User updated successfully');
         notificationService.success('User updated successfully');
       }
@@ -289,7 +289,7 @@ const UsersPage = () => {
 
   const handleDeleteUser = async () => {
     try {
-      await userAPI.deleteUser(selectedUser.id);
+      await usersAPI.deleteUser(selectedUser.id);
       // setSuccess('User deleted successfully');
       notificationService.success('User deleted successfully');
       closeDialog('delete');
@@ -303,7 +303,7 @@ const UsersPage = () => {
 
   const handleBulkDelete = async () => {
     try {
-      await Promise.all(selectedUsers.map(id => userAPI.deleteUser(id)));
+      await Promise.all(selectedUsers.map(id => usersAPI.deleteUser(id)));
       //setSuccess(`${selectedUsers.length} users deleted successfully`);
       notificationService.success(`${selectedUsers.length} users deleted successfully`);
       setSelectedUsers([]);
@@ -318,7 +318,7 @@ const UsersPage = () => {
 
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
-      await userAPI.updateUser(userId, { isActive: !currentStatus });
+      await usersAPI.updateUser(userId, { isActive: !currentStatus });
       //setSuccess('User status updated');
       notificationService.compact.success('Status updated');
       fetchUsers();
@@ -331,7 +331,7 @@ const UsersPage = () => {
 
   const handleToggleVerify = async (userId, currentStatus) => {
     try {
-      await userAPI.updateUser(userId, { isVerified: !currentStatus });
+      await usersAPI.updateUser(userId, { isVerified: !currentStatus });
       //setSuccess('User verification updated');
       notificationService.compact.success('Verification updated');
       fetchUsers();

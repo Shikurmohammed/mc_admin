@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
-import { Container, Paper, TextField, Button, Typography, Box, Alert, InputAdornment, IconButton, Link, Grid, Divider, alpha, FormControlLabel, Checkbox } from '@mui/material';
+import { Container, Paper, TextField, Button, Typography, Box, Alert, InputAdornment, IconButton, Link, Grid, Divider, alpha, FormControlLabel, Checkbox, Tooltip } from '@mui/material';
 import { Visibility, VisibilityOff, Email, Lock, Login, Google, Facebook, ShoppingBag, RememberMe } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+// Ethiopian traditional colors
+const ethiopianColors = {
+  green: '#078930',
+  yellow: '#FCDD09',
+  red: '#DA121A',
+  blue: '#0F47AF',
+  gold: '#B8860B',
+  brown: '#8B4513',
+  ochre: '#CC7722',
+  cream: '#FDF5E6',
+  coffee: '#6F4E37',
+};
 
 const LoginPage = () => {
   const { t } = useTranslation();
@@ -32,6 +44,9 @@ const LoginPage = () => {
     setLoading(false);
   };
 
+  const handleNavigate = async (path) => {
+    navigate(path);
+  }
 
 
   return (
@@ -48,9 +63,15 @@ const LoginPage = () => {
 
           {/* Left Side: Branding & Visuals (Hidden on small mobile if needed, or centered) */}
           <Grid item xs={12} md={6} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
-            <Box sx={{ display: 'inline-flex', p: 1.5, borderRadius: 3, bgcolor: 'primary.main', mb: 3 }}>
-              <ShoppingBag sx={{ color: 'white', fontSize: 32 }} />
+            <Box sx={{ display: 'inline-flex', p: 1.5, borderRadius: 3, bgcolor: 'primary.main', mb: 3 }} >
+              <Tooltip title="Go to Home" placement="top">
+                <ShoppingBag sx={{ color: 'white', fontSize: 32 }} onClick={() => handleNavigate('/')} />
+              </Tooltip>
             </Box>
+            <Typography variant="h6" fontWeight={700} color="white" sx={{ ml: 1, cursor: 'pointer' }} onClick={() => handleNavigate('/')}>
+              Go to Home
+            </Typography>
+            <Divider sx={{ my: 2 }}></Divider>
             <Typography
               variant="h2"
               fontWeight={800}
@@ -63,6 +84,7 @@ const LoginPage = () => {
             <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, maxWidth: 450, mx: { xs: 'auto', md: 0 } }}>
               Connect with unique creators and manage your craft collection with ease.
             </Typography>
+
           </Grid>
 
           {/* Right Side: Login Card */}
@@ -184,11 +206,15 @@ const LoginPage = () => {
                         component={RouterLink}
                         to="/forgot-password"
                         variant="body2"
+                        sx={{
+                          color: ethiopianColors.green,
+                          textDecoration: 'none',
+                          '&:hover': { textDecoration: 'underline' },
+                        }}
                       >
-                        Forgot?
+                        Forgot password?
                       </Link>
                     </Box>
-
                     <Button
                       type="submit"
                       fullWidth

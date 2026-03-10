@@ -1,23 +1,19 @@
-import React from 'react';
-import { Box, Toolbar } from '@mui/material';
-import { Outlet } from 'react-router-dom';
-import { useSidebar } from '../../hooks/useSidebar';
+import { drawerWidth, collapsedWidth } from '../../utils/constants';
+  const { open } = useSidebar();
 
+  // This ensures the margin is always exactly the size of the sidebar
+  const currentWidth = open ? drawerWidth : collapsedWidth;
 const MainContent = ({ children }) => {
-  const { sidebarWidth } = useSidebar();
-
   return (
     <Box
       component="main"
       sx={{
         flexGrow: 1,
         p: 3,
-        width: { sm: `calc(100% - ${sidebarWidth}px)` },
-        transition: (theme) => theme.transitions.create(['width', 'margin'], {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.leavingScreen,
-        }),
-        ml: { sm: `${sidebarWidth}px` },
+        transition: (theme) =>
+          theme.transitions.create('margin', {
+            duration: theme.transitions.duration.standard,
+          }),
       }}
     >
       <Toolbar />
@@ -25,5 +21,6 @@ const MainContent = ({ children }) => {
     </Box>
   );
 };
+
 
 export default MainContent;
