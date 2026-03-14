@@ -9,7 +9,7 @@ export const authAPI = {
 
   logout: () => apiService.post('/auth/logout', {}), // Empty body - token in cookie
 
-  getProfile: () => apiService.get('/auth/profile'),
+  getProfile: () => apiService.get('/auth/profile'),// Protected route to get user profile
 
   checkAuth: () => apiService.get('/auth/check'),
 

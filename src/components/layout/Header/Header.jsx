@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, isValidElement } from 'react';
 import LanguageSwitcher from '../../common/LanguageSwitcher';
-
 import {
   AppBar,
   Toolbar,
@@ -40,6 +39,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useThemeMode } from '../../../context/ThemeContext';
+import { useMessages } from '../../../context/MessageContext'; // Import useMessages
 import NotificationBell from './NotificationBell';
 import { menuService } from '../../../services/menuService';
 import MessagesDropdown from './MessagesDropdown';
@@ -49,7 +49,9 @@ const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const { mode, toggleTheme } = useThemeMode();
   const navigate = useNavigate();
-  const [unreadCount, setUnreadCount] = useState(10);
+  
+  // Get unreadCount from MessageContext
+  const { unreadCount, connectionStatus } = useMessages(); // Add connectionStatus for debugging
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchValue, setSearchValue] = useState('');
@@ -70,6 +72,8 @@ const Header = ({ onMenuClick }) => {
   // Add handlers:
   const handleMessagesClick = (event) => {
     setMessagesAnchorEl(event.currentTarget);
+    // Navigate to messages page on click (optional)
+    // navigate('/dashboard/messages');
   };
 
   const handleMessagesClose = () => {
@@ -120,7 +124,10 @@ const Header = ({ onMenuClick }) => {
     navigate(path);
   };
 
-
+  // Debug log to see unread count updates
+  useEffect(() => {
+    console.log('🔔 Header unreadCount updated:', unreadCount);
+  }, [unreadCount]);
 
   return (
     <AppBar
@@ -143,6 +150,7 @@ const Header = ({ onMenuClick }) => {
           Dashboard
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
+        
         {/* Global Search */}
         <ClickAwayListener onClickAway={() => setShowSearchResults(false)}>
           <Box sx={{ position: 'relative', flexGrow: 1, maxWidth: 600, mr: 2 }}>
@@ -185,24 +193,49 @@ const Header = ({ onMenuClick }) => {
           </Box>
         </ClickAwayListener>
 
-
         {/* Actions */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <IconButton onClick={toggleTheme} color="inherit">
             {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
           </IconButton>
 
-
-
-          {/* Messages Icon */}
+          {/* Messages Icon with Real-time Unread Count */}
           <Tooltip title="Messages">
-            <IconButton onClick={handleMessagesClick} color="inherit">
-              <Badge badgeContent={unreadCount} color="error">
-
+            <IconButton 
+              onClick={handleMessagesClick} 
+              color="inherit"
+              sx={{ position: 'relative' }}
+            >
+              <Badge 
+                badgeContent={unreadCount} 
+                color="error"
+                max={99}
+                sx={{
+                  '& .MuiBadge-badge': {
+                    animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none',
+                  }
+                }}
+              >
                 <ChatIcon />
               </Badge>
             </IconButton>
           </Tooltip>
+
+          {/* Connection Status Indicator (Optional - for debugging) */}
+          {connectionStatus !== 'connected' && (
+            <Tooltip title={`Connection: ${connectionStatus}`}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: connectionStatus === 'connected' ? 'success.main' : 
+                          connectionStatus === 'connecting' ? 'warning.main' : 'error.main',
+                  ml: 0.5
+                }}
+              />
+            </Tooltip>
+          )}
 
           <MessagesDropdown
             anchorEl={messagesAnchorEl}
@@ -210,9 +243,7 @@ const Header = ({ onMenuClick }) => {
             onClose={handleMessagesClose}
           />
 
-
           {/* Notification Bell */}
-
           <NotificationBell />
 
           <Tooltip title="Account settings">
@@ -246,6 +277,23 @@ const Header = ({ onMenuClick }) => {
         </Menu>
         <LanguageSwitcher variant="icon" size="small" />
       </Toolbar>
+
+      {/* Add pulse animation for unread count */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.1);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
+        `}
+      </style>
     </AppBar>
   );
 };

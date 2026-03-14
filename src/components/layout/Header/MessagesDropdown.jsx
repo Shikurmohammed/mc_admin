@@ -39,10 +39,15 @@ import { formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MessagesDropdown = ({ anchorEl, open, onClose }) => {
+  // ALL HOOKS MUST BE CALLED AT THE TOP LEVEL, BEFORE ANY CONDITIONAL LOGIC
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // This hook must be called unconditionally at the top
   const { conversations, unreadCount, loading, markAsRead, isUserOnline } = useMessages();
+  
+  // Now we can use useState hooks
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [recentChats, setRecentChats] = useState([]);
@@ -58,9 +63,10 @@ const MessagesDropdown = ({ anchorEl, open, onClose }) => {
   }, [conversations]);
 
   const handleChatClick = (conversation) => {
+    console.log("Opening chat with:", conversation.participant?.firstName);
     markAsRead(conversation.id);
     onClose();
-    navigate('/messages', { state: { selectedChat: conversation } });
+    navigate('messages', { state: { selectedChat: conversation } });
   };
 
   const handleViewAll = () => {
@@ -70,7 +76,7 @@ const MessagesDropdown = ({ anchorEl, open, onClose }) => {
 
   const handleNewMessage = () => {
     onClose();
-    navigate('/messages', { state: { openNewMessage: true } });
+    navigate('messages', { state: { openNewMessage: true } });
   };
 
   const formatMessageTime = (timestamp) => {

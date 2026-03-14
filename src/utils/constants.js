@@ -1,6 +1,6 @@
 export const drawerWidth = 280;
 export const collapsedWidth = 72; // standard mini sidebar width
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+export const API_BASE_URL = process.env.Backend_API_URL || 'http://localhost:5000/api';
 
 // Chart colors
 export const CHART_COLORS = {
